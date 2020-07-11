@@ -7,20 +7,15 @@ add_compile_options(-std=c++11)
 ## Find catkin macros and libraries
 ## if COMPONENTS list like find_package(catkin REQUIRED COMPONENTS xyz)
 ## is used, also find other catkin packages
-find_package(catkin REQUIRED COMPONENTS
+find_package(catkin REQUIRED
   roscpp
   rospy
   std_msgs
-  dbw_mkz_msgs
+  geometry_msgs
+  visualization_msgs
   autoware_msgs
   tf
-  message_generation
 )
-
-################################################
-## Declare ROS messages, services and actions ##
-################################################
-
 
 
 ###################################
@@ -34,8 +29,8 @@ find_package(catkin REQUIRED COMPONENTS
 ## DEPENDS: system dependencies of this project that dependent projects also need
 catkin_package(
 #  INCLUDE_DIRS include
-#  LIBRARIES motion_planner
-  CATKIN_DEPENDS roscpp rospy std_msgs autoware_msgs message_runtime
+#  LIBRARIES motion_planning
+  CATKIN_DEPENDS autoware_msgs
 #  DEPENDS system_lib
 )
 
@@ -46,19 +41,10 @@ catkin_package(
 ## Specify additional locations of header files
 ## Your package locations should be listed before other locations
 include_directories(
-  include
-  ${catkin_INCLUDE_DIRS}
+ include
+ ${catkin_INCLUDE_DIRS}
 )
 
-## Declare a C++ library
-# add_library(${PROJECT_NAME}
-#   src/${PROJECT_NAME}/motion_planner.cpp
-# )
-
-add_executable(motion_planner_node src/motion_planner.cpp src/occupancy_distribution src/motion_prediction.cpp src/visualizer.cpp src/util.cpp)
-target_link_libraries(motion_planner_node ${catkin_LIBRARIES})
-add_dependencies(motion_planner_node ${catkin_EXPORTED_TARGETS})
-
-#############
-## Install ##
-#############
+add_executable(rrt_node src/rrt.cpp src/occupancy_distribution.cpp src/visualizer.cpp)
+target_link_libraries(rrt_node ${catkin_LIBRARIES})
+add_dependencies(rrt_node ${catkin_EXPORTED_TARGETS})

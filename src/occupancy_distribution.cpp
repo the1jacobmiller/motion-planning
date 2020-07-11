@@ -2,7 +2,12 @@
 
 using namespace std;
 
-float Occupancy_Distribution::calcOccupancyProbability(point p, float t, vehicle_state ford_state) {
+float cdf(float mu, float sigma, float value) {
+  // returns the CDF of a Gaussian distribution
+  return 0.5 * erfc(-(value-mu)/(sigma*sqrt(2)));
+}
+
+float Occupancy_Distribution::calcOccupancyProbability(point p, vehicle_state ford_state) {
   double max_uncertainty_multiplier;
   if (!ros::param::get("/motion_planning/max_uncertainty_multiplier", max_uncertainty_multiplier)) {
       ROS_ERROR_STREAM("Failed to read ROS configs from calcOccupancyProbability");
@@ -11,13 +16,10 @@ float Occupancy_Distribution::calcOccupancyProbability(point p, float t, vehicle
 
   if (!obstacles_detected) return 0.0;
 
-  // predict obstacle motion
-  autoware_msgs::DetectedObjectArray predicted_obstacles = predictObstacleMotion(obstacles, ford_state, t);
-
   // sum the probability densities for each obstacle
   double total_probability = 0.0;
-  for (int i = 0; i < predicted_obstacles.objects.size(); i++) {
-    autoware_msgs::DetectedObject obstacle = predicted_obstacles.objects[i];
+  for (int i = 0; i < obstacles.objects.size(); i++) {
+    autoware_msgs::DetectedObject obstacle = obstacles.objects[i];
 
     // translate obstacle into vehicle's frame of reference
     long double mu_x = (obstacle.pose.position.x * cos(ford_state.yaw) - obstacle.pose.position.y * sin(ford_state.yaw)) + ford_state.position.x;
@@ -28,12 +30,9 @@ float Occupancy_Distribution::calcOccupancyProbability(point p, float t, vehicle
 
     // assign variances based on the obstacle score (or variance)
     // as score lowers, sigma increases
-    // TODO - check if variance is being set for obstacles
     float sigma_x = min(1.0/obstacle.score, max_uncertainty_multiplier);
     float sigma_y = min(1.0/obstacle.score, max_uncertainty_multiplier);
 
-    // sigma_x = 5.0;
-    // sigma_y = 5.0;
 
     obstacle.dimensions.x += vehicle_length;
     obstacle.dimensions.y += vehicle_width;
@@ -57,14 +56,14 @@ float Occupancy_Distribution::calcOccupancyProbability(point p, float t, vehicle
   return total_probability;
 }
 
-bool Occupancy_Distribution::isFeasible(point node, float t, vehicle_state ford_state, float &probability) {
+bool Occupancy_Distribution::isFeasible(point node, vehicle_state ford_state, float &probability) {
   float occupancy_threshold;
   if (!ros::param::get("/motion_planning/occupancy_threshold", occupancy_threshold)) {
       ROS_ERROR_STREAM("Failed to read ROS configs from isFeasible");
       ros::shutdown();
   }
 
-  probability = calcOccupancyProbability(node, t, ford_state);
+  probability = calcOccupancyProbability(node, ford_state);
   if (probability > occupancy_threshold) {
     // ROS_ERROR_STREAM("Node is not feasible");
     return false;
